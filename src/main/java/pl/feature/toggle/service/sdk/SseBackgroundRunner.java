@@ -45,7 +45,7 @@ final class SseBackgroundRunner {
                         .build();
 
                 var response = httpClient.send(request, HttpResponse.BodyHandlers.ofLines());
-                System.out.println("Received response from sse: " + response.body());
+                System.out.println("SSE connection established");
 
                 response.body().forEach(line -> {
                     if (line.startsWith("data:")) {
@@ -77,7 +77,7 @@ final class SseBackgroundRunner {
     private URI sseUri(FeatureToggleSdkConfiguration configuration) {
         return URI.create(
                 configuration.baseUrl()
-                        + "/rest/api/sdk/projects/" + configuration.projectId()
+                        + "/api/sdk/projects/" + configuration.projectId()
                         + "/environments/" + configuration.environmentId()
                         + "/feature-toggles/stream"
         );

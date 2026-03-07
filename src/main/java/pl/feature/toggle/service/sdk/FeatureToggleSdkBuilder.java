@@ -1,6 +1,7 @@
 package pl.feature.toggle.service.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -60,7 +61,8 @@ final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
         var httpClient = HttpClient.newBuilder()
                 .connectTimeout(connectTimeout)
                 .build();
-        var objectMapper = new ObjectMapper();
+        var objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule());
         var snapshotFetcher = new SnapshotFetcher(httpClient, objectMapper);
         var runtime = new FeatureToggleRuntime();
         var configuration = new FeatureToggleSdkConfiguration(

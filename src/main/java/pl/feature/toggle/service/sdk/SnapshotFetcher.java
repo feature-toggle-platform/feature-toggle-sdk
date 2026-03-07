@@ -19,7 +19,9 @@ final class SnapshotFetcher {
 
     FeatureToggleSdkSnapshot fetch(FeatureToggleSdkConfiguration configuration) {
         try {
-            var requestBuilder = HttpRequest.newBuilder(snapshotUri(configuration))
+            var uri = snapshotUri(configuration);
+            System.out.println("Snapshot URI: " + uri);
+            var requestBuilder = HttpRequest.newBuilder(uri)
                     .GET()
                     .timeout(configuration.readTimeout())
                     .header("Accept", "application/json");
@@ -41,7 +43,7 @@ final class SnapshotFetcher {
     private URI snapshotUri(FeatureToggleSdkConfiguration configuration) {
         return URI.create(
                 configuration.baseUrl()
-                        + "/rest/api/sdk/projects/" + configuration.projectId()
+                        + "/api/sdk/projects/" + configuration.projectId()
                         + "/environments/" + configuration.environmentId()
                         + "/feature-toggles"
         );
