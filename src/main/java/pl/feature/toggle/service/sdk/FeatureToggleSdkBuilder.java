@@ -1,5 +1,8 @@
 package pl.feature.toggle.service.sdk;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
@@ -54,12 +57,26 @@ final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
 
     @Override
     public FeatureToggleClient build() {
+        var httpClient = HttpClient.newBuilder()
+                .connectTimeout(connectTimeout)
+                .build();
+        var objectMapper = new ObjectMapper();
+        var snapshotFetcher = new SnapshotFetcher(httpClient, objectMapper);
+        var runtime = new FeatureToggleRuntime();
+        var configuration = new FeatureToggleSdkConfiguration(
+                baseUrl,
+                projectId,
+                environmentId,
+                readTimeout,
+                reconnectDelay,
+                connectTimeout
+        );
+        var sseBackgroundRunner = new SseBackgroundRunner(httpClient, snapshotFetcher, runtime, configuration);
+        var clientStarter = new FeatureToggleClientStarter(runtime, snapshotFetcher, configuration, sseBackgroundRunner);
         return new DefaultFeatureToggleClient(
-                new FeatureToggleSdkConfiguration(
-                        baseUrl,
-                        projectId,
-                        environmentId
-                )
+                clientStarter,
+                runtime,
+                sseBackgroundRunner
         );
     }
 

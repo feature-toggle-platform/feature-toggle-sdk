@@ -2,15 +2,19 @@ package pl.feature.toggle.service.sdk;
 
 final class DefaultFeatureToggleClient implements FeatureToggleClient {
 
-    private final FeatureToggleSdkConfiguration configuration;
+    private final FeatureToggleClientStarter featureToggleClientStarter;
+    private final FeatureToggleRuntime runtime;
+    private final SseBackgroundRunner sseBackgroundRunner;
 
-    DefaultFeatureToggleClient(FeatureToggleSdkConfiguration configuration) {
-        this.configuration = configuration;
+    DefaultFeatureToggleClient(FeatureToggleClientStarter featureToggleClientStarter, FeatureToggleRuntime runtime, SseBackgroundRunner sseBackgroundRunner) {
+        this.featureToggleClientStarter = featureToggleClientStarter;
+        this.runtime = runtime;
+        this.sseBackgroundRunner = sseBackgroundRunner;
     }
 
     @Override
     public void start() {
-
+        featureToggleClientStarter.start();
     }
 
     @Override
@@ -30,6 +34,7 @@ final class DefaultFeatureToggleClient implements FeatureToggleClient {
 
     @Override
     public void close() {
-
+        runtime.close();
+        sseBackgroundRunner.stop();
     }
 }
