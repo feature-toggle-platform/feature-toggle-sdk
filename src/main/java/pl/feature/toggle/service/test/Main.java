@@ -1,6 +1,6 @@
 package pl.feature.toggle.service.test;
 
-import pl.feature.toggle.service.sdk.FeatureToggle;
+import pl.feature.toggle.service.sdk.api.FeatureToggle;
 
 import java.util.UUID;
 

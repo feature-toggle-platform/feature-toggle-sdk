@@ -1,5 +1,7 @@
 package pl.feature.toggle.service.sdk;
 
+import pl.feature.toggle.service.sdk.api.FeatureToggleClient;
+
 final class DefaultFeatureToggleClient implements FeatureToggleClient {
 
     private final FeatureToggleClientStarter featureToggleClientStarter;

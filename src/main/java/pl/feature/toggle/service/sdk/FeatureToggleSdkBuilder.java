@@ -2,13 +2,14 @@ package pl.feature.toggle.service.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import pl.feature.toggle.service.sdk.api.*;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
-final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
+public final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
         FeatureToggleProjectStep,
         FeatureToggleEnvironmentStep,
         FeatureToggleOptionalStep {
@@ -64,6 +65,7 @@ final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
         var objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
         var snapshotFetcher = new SnapshotFetcher(httpClient, objectMapper);
+        var retryingSnapshotFetcher = new RetryingSnapshotFetcher(snapshotFetcher);
         var runtime = new FeatureToggleRuntime();
         var configuration = new FeatureToggleSdkConfiguration(
                 baseUrl,
@@ -74,7 +76,7 @@ final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
                 connectTimeout
         );
         var sseBackgroundRunner = new SseBackgroundRunner(httpClient, snapshotFetcher, runtime, configuration);
-        var clientStarter = new FeatureToggleClientStarter(runtime, snapshotFetcher, configuration, sseBackgroundRunner);
+        var clientStarter = new FeatureToggleClientStarter(runtime, retryingSnapshotFetcher, configuration, sseBackgroundRunner);
         return new DefaultFeatureToggleClient(
                 clientStarter,
                 runtime,

@@ -1,5 +1,7 @@
-package pl.feature.toggle.service.sdk;
+package pl.feature.toggle.service.sdk.api;
 
+
+import pl.feature.toggle.service.sdk.FeatureToggleSdkBuilder;
 
 public final class FeatureToggle {
 

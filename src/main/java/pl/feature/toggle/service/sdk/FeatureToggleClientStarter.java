@@ -1,31 +1,29 @@
 package pl.feature.toggle.service.sdk;
 
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@AllArgsConstructor
 final class FeatureToggleClientStarter {
 
     private final FeatureToggleRuntime runtime;
-    private final SnapshotFetcher snapshotFetcher;
+    private final RetryingSnapshotFetcher snapshotFetcher;
     private final FeatureToggleSdkConfiguration configuration;
     private final SseBackgroundRunner sseBackgroundRunner;
-
-    FeatureToggleClientStarter(FeatureToggleRuntime runtime, SnapshotFetcher snapshotFetcher,
-                               FeatureToggleSdkConfiguration configuration, SseBackgroundRunner sseBackgroundRunner) {
-        this.runtime = runtime;
-        this.snapshotFetcher = snapshotFetcher;
-        this.configuration = configuration;
-        this.sseBackgroundRunner = sseBackgroundRunner;
-    }
 
     void start() {
         ensureClientCanBeStarted();
 
         try {
-            var snapshot = snapshotFetcher.fetch(configuration);
-            var state = FeatureToggleState.createFrom(snapshot);
+            var snapshotResponse = snapshotFetcher.fetch(configuration);
+            var state = FeatureToggleState.createFrom(snapshotResponse);
             runtime.markStarted(state);
             sseBackgroundRunner.start();
         } catch (Exception exception) {
             runtime.resetStartAttempt();
-            throw new IllegalStateException("Failed to start feature toggle client", exception);
+            log.error("[Feature-toggle] Failed to start feature toggle:", exception);
+            log.error("[Feature-toggle] Will work in default mode");
         }
     }
 

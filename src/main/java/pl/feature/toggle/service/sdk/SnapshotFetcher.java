@@ -1,43 +1,55 @@
 package pl.feature.toggle.service.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import pl.feature.toggle.service.sdk.exception.FeatureToggleException;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+@AllArgsConstructor
+@Slf4j
 final class SnapshotFetcher {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    SnapshotFetcher(HttpClient httpClient, ObjectMapper objectMapper) {
-        this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
-    }
+    private static final String HEADER_ACCEPT = "Accept";
+    private static final String HEADER_ACCEPT_VALUE = "application/json";
 
     FeatureToggleSdkSnapshot fetch(FeatureToggleSdkConfiguration configuration) {
         try {
             var uri = snapshotUri(configuration);
-            System.out.println("Snapshot URI: " + uri);
-            var requestBuilder = HttpRequest.newBuilder(uri)
-                    .GET()
-                    .timeout(configuration.readTimeout())
-                    .header("Accept", "application/json");
+            log.debug("Feature-toggle snapshot will be fetched from: {}", uri);
 
-            var response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            var request = buildHttpRequest(configuration, uri);
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("Snapshot fetch failed with status: " + response.statusCode());
+            if (isErrorResponse(response)) {
+                throw new FeatureToggleException("Snapshot fetch failed with status: " + response.statusCode());
             }
 
             var snapshot = objectMapper.readValue(response.body(), FeatureToggleSdkSnapshot.class);
-            System.out.println("Reveived Snapshot from snapshot to fetch: " + objectMapper.writeValueAsString(snapshot));
+            log.debug("[Feature-toggle] Snapshot successfully fetched");
             return snapshot;
         } catch (Exception exception) {
-            throw new IllegalStateException("Failed to fetch feature toggle snapshot", exception);
+            throw new FeatureToggleException("Snapshot fetch failed", exception);
         }
+    }
+
+    private boolean isErrorResponse(HttpResponse<String> response) {
+        return response.statusCode() < 200 || response.statusCode() >= 300;
+    }
+
+    private HttpRequest buildHttpRequest(FeatureToggleSdkConfiguration configuration, URI uri) {
+        return HttpRequest.newBuilder(uri)
+                .GET()
+                .timeout(configuration.readTimeout())
+                .header(HEADER_ACCEPT, HEADER_ACCEPT_VALUE)
+                .build();
     }
 
     private URI snapshotUri(FeatureToggleSdkConfiguration configuration) {

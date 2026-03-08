@@ -1,4 +1,4 @@
-package pl.feature.toggle.service.sdk;
+package pl.feature.toggle.service.sdk.api;
 
 public interface FeatureToggleBaseUrlStep {
 
