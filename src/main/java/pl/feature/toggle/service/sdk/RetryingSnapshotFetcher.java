@@ -8,28 +8,27 @@ import java.time.Duration;
 
 @AllArgsConstructor
 @Slf4j
-final class RetryingSnapshotFetcher {
+final class RetryingSnapshotFetcher implements SnapshotFetcher {
 
-    private static final int MAX_ATTEMPTS = 3;
-    private static final Duration DELAY = Duration.ofSeconds(2);
+    private final HttpSnapshotFetcher delegate;
+    private final FeatureToggleSdkConfiguration configuration;
 
-    private final SnapshotFetcher delegate;
-
-    FeatureToggleSdkSnapshot fetch(FeatureToggleSdkConfiguration configuration) {
+    @Override
+    public FeatureToggleSdkSnapshot fetch() {
         RuntimeException lastException = null;
 
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 1; attempt <= configuration.snapshotMaxAttempts(); attempt++) {
             try {
-                return delegate.fetch(configuration);
+                return delegate.fetch();
             } catch (RuntimeException exception) {
                 lastException = exception;
                 log.warn("[Feature-toggle] Snapshot fetch attempt {}/{} failed: {}",
                         attempt,
-                        MAX_ATTEMPTS,
+                        configuration.snapshotMaxAttempts(),
                         exception.getMessage());
 
-                if (attempt < MAX_ATTEMPTS) {
-                    sleep(DELAY);
+                if (attempt < configuration.snapshotMaxAttempts()) {
+                    sleep(configuration.snapshotRetryDelay());
                 }
             }
         }

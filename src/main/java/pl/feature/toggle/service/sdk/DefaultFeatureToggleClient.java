@@ -1,42 +1,40 @@
 package pl.feature.toggle.service.sdk;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import pl.feature.toggle.service.sdk.api.FeatureToggleClient;
+import pl.feature.toggle.service.sdk.api.FeatureToggles;
+import pl.feature.toggle.service.sdk.exception.FeatureToggleException;
 
+@Slf4j
+@RequiredArgsConstructor
 final class DefaultFeatureToggleClient implements FeatureToggleClient {
 
-    private final FeatureToggleClientStarter featureToggleClientStarter;
-    private final FeatureToggleRuntime runtime;
-    private final SseBackgroundRunner sseBackgroundRunner;
-
-    DefaultFeatureToggleClient(FeatureToggleClientStarter featureToggleClientStarter, FeatureToggleRuntime runtime, SseBackgroundRunner sseBackgroundRunner) {
-        this.featureToggleClientStarter = featureToggleClientStarter;
-        this.runtime = runtime;
-        this.sseBackgroundRunner = sseBackgroundRunner;
-    }
+    private final SdkRuntime runtime;
+    private final SseRunner sseRunner;
+    private boolean started;
 
     @Override
     public void start() {
-        featureToggleClientStarter.start();
+        if (started) {
+            throw new FeatureToggleException("Feature toggle client is already started");
+        }
+
+        runtime.refreshMemory();
+        sseRunner.start();
+        started = true;
+        log.info("[FeatureToggle] Feature toggle client started");
     }
 
     @Override
-    public boolean getBoolean(String featureToggle, boolean defaultValue) {
-        return false;
-    }
-
-    @Override
-    public String getText(String featureToggle, String defaultValue) {
-        return "";
-    }
-
-    @Override
-    public Number getNumber(String featureToggle, Number defaultValue) {
-        return null;
+    public FeatureToggles featureToggles() {
+        return runtime.featureToggles();
     }
 
     @Override
     public void close() {
-        runtime.close();
-        sseBackgroundRunner.stop();
+        sseRunner.stop();
+        started = false;
+        log.info("[FeatureToggle] Feature toggle client stopped");
     }
 }

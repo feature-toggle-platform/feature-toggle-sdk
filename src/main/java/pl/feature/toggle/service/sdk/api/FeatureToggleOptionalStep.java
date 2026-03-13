@@ -10,6 +10,10 @@ public interface FeatureToggleOptionalStep {
 
     FeatureToggleOptionalStep reconnectDelay(Duration reconnectDelay);
 
+    FeatureToggleOptionalStep snapshotMaxAttempts(int snapshotMaxAttempts);
+
+    FeatureToggleOptionalStep snapshotRetryDelay(Duration snapshotRetryDelay);
+
     FeatureToggleClient build();
 
 }

@@ -28,7 +28,7 @@ record FeatureToggleSdkSnapshot(
 
     record Toggle(
             UUID id,
-            String key,
+            String name,
             String type,
             Object value,
             boolean active,

@@ -1,5 +1,8 @@
 package pl.feature.toggle.service.sdk;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,32 +10,23 @@ import java.net.http.HttpResponse;
 
 import static java.lang.Thread.sleep;
 
-final class SseBackgroundRunner {
+@RequiredArgsConstructor
+@Slf4j
+final class SseBackgroundRunner implements SseRunner {
 
     private final HttpClient httpClient;
-    private final SnapshotFetcher snapshotFetcher;
-    private final FeatureToggleRuntime runtime;
     private final FeatureToggleSdkConfiguration configuration;
+    private final Runnable onRefreshRequiredAction;
 
     private volatile boolean running = true;
 
-    SseBackgroundRunner(
-            HttpClient httpClient,
-            SnapshotFetcher snapshotFetcher,
-            FeatureToggleRuntime runtime,
-            FeatureToggleSdkConfiguration configuration
-    ) {
-        this.httpClient = httpClient;
-        this.snapshotFetcher = snapshotFetcher;
-        this.runtime = runtime;
-        this.configuration = configuration;
-    }
-
-    void stop() {
+    @Override
+    public void stop() {
         running = false;
     }
 
-    void start() {
+    @Override
+    public void start() {
         Thread.startVirtualThread(this::runLoop);
     }
 
@@ -45,7 +39,7 @@ final class SseBackgroundRunner {
                         .build();
 
                 var response = httpClient.send(request, HttpResponse.BodyHandlers.ofLines());
-                System.out.println("SSE connection established");
+                log.debug("SSE connection established");
 
                 response.body().forEach(line -> {
                     if (line.startsWith("data:")) {
@@ -54,7 +48,7 @@ final class SseBackgroundRunner {
                 });
 
             } catch (Exception e) {
-                System.err.println("SSE connection failed, retrying...");
+                log.warn("SSE connection failed, retrying...");
                 try {
                     sleep(2000);
                 } catch (InterruptedException ignored) {
@@ -66,11 +60,9 @@ final class SseBackgroundRunner {
     private void handleEvent(String eventData) {
         try {
             System.out.println("SSE event received: " + eventData);
-            var snapshot = snapshotFetcher.fetch(configuration);
-            var state = FeatureToggleState.createFrom(snapshot);
-            runtime.update(state);
+            onRefreshRequiredAction.run();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SSE handling event failed", e);
         }
     }
 

@@ -9,6 +9,8 @@ record FeatureToggleSdkConfiguration(
         UUID environmentId,
         Duration readTimeout,
         Duration reconnectionDelay,
-        Duration connectTimeout
+        Duration connectTimeout,
+        int snapshotMaxAttempts,
+        Duration snapshotRetryDelay
 ) {
 }

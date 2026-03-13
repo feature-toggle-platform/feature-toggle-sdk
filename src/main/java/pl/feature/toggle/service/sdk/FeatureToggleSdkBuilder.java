@@ -20,6 +20,8 @@ public final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
     private Duration connectTimeout = Duration.ofSeconds(3);
     private Duration readTimeout = Duration.ofSeconds(5);
     private Duration reconnectDelay = Duration.ofSeconds(2);
+    private int snapshotMaxAttempts = 3;
+    private Duration snapshotRetryDelay = Duration.ofSeconds(5);
 
     @Override
     public FeatureToggleProjectStep baseUrl(String baseUrl) {
@@ -58,30 +60,46 @@ public final class FeatureToggleSdkBuilder implements FeatureToggleBaseUrlStep,
     }
 
     @Override
+    public FeatureToggleOptionalStep snapshotMaxAttempts(int snapshotMaxAttempts) {
+        this.snapshotMaxAttempts = snapshotMaxAttempts;
+        return this;
+    }
+
+    @Override
+    public FeatureToggleOptionalStep snapshotRetryDelay(Duration snapshotRetryDelay) {
+        this.snapshotRetryDelay = snapshotRetryDelay;
+        return this;
+    }
+
+    @Override
     public FeatureToggleClient build() {
-        var httpClient = HttpClient.newBuilder()
-                .connectTimeout(connectTimeout)
-                .build();
-        var objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule());
-        var snapshotFetcher = new SnapshotFetcher(httpClient, objectMapper);
-        var retryingSnapshotFetcher = new RetryingSnapshotFetcher(snapshotFetcher);
-        var runtime = new FeatureToggleRuntime();
         var configuration = new FeatureToggleSdkConfiguration(
                 baseUrl,
                 projectId,
                 environmentId,
                 readTimeout,
                 reconnectDelay,
-                connectTimeout
+                connectTimeout,
+                snapshotMaxAttempts,
+                snapshotRetryDelay
         );
-        var sseBackgroundRunner = new SseBackgroundRunner(httpClient, snapshotFetcher, runtime, configuration);
-        var clientStarter = new FeatureToggleClientStarter(runtime, retryingSnapshotFetcher, configuration, sseBackgroundRunner);
-        return new DefaultFeatureToggleClient(
-                clientStarter,
-                runtime,
-                sseBackgroundRunner
+        var httpClient = HttpClient.newBuilder()
+                .connectTimeout(connectTimeout)
+                .build();
+        var objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule());
+        var snapshotFetcher = new HttpSnapshotFetcher(httpClient, objectMapper, configuration);
+        var retryingSnapshotFetcher = new RetryingSnapshotFetcher(snapshotFetcher, configuration);
+        var featureToggles = new InMemoryFeatureToggles();
+        var runtime = new SdkRuntime(retryingSnapshotFetcher, featureToggles);
+
+        var sseRunner = new SseBackgroundRunner(
+                httpClient,
+                configuration,
+                runtime::refreshMemory
         );
+
+        return new DefaultFeatureToggleClient(runtime, sseRunner);
     }
 
     private static String requireNotBlank(String value, String fieldName) {
